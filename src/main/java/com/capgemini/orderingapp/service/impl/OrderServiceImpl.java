@@ -3,13 +3,18 @@ package com.capgemini.orderingapp.service.impl;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.capgemini.orderingapp.entity.LineItem;
 import com.capgemini.orderingapp.entity.Order;
+import com.capgemini.orderingapp.exception.CustomerDoesnotExistsException;
 import com.capgemini.orderingapp.exception.OrderDoesnotExistsException;
 import com.capgemini.orderingapp.repository.OrderRepository;
 import com.capgemini.orderingapp.service.OrderService;
@@ -22,66 +27,63 @@ public class OrderServiceImpl implements OrderService {
 
 	private HashMap<Integer, Set<LineItem>> itemCart = new HashMap<>();
 
+	
+
 	@Override
-	public void addLineItem(LineItem item, int customerId) {
-		Set<LineItem> tempSet = itemCart.get(customerId);
-		if (tempSet == null) {
-			tempSet = new HashSet<>();
-			tempSet.add(item);
-			itemCart.put(customerId, tempSet);
-		} else {
-			tempSet.add(item);
-			itemCart.put(customerId, tempSet);
-		}
+	public List<Order> getAllOrders()  {
+		return orderRepository.findAll();
 	}
 
 	@Override
-	public void removeLineItem(LineItem item, int customerId) {
-		Set<LineItem> tempSet = itemCart.get(customerId);
-		if (tempSet != null) {
-			tempSet.remove(item);
-			itemCart.put(customerId, tempSet);
-		}
-
-	}
-
-	@Override
-	public Set<LineItem> getLineItems(int customerId) {
-		Set<LineItem> tempSet = itemCart.get(customerId);
-		return tempSet;
-	}
-
-	@Override
-	public Set<Order> getOrders(int customerId) throws OrderDoesnotExistsException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Order getOrder(int orderId) throws OrderDoesnotExistsException {
-		// TODO Auto-generated method stub
-		return null;
+	public Order getOrderById(int orderId) throws OrderDoesnotExistsException {
+		Optional<Order> optional = orderRepository.findById(orderId);
+		if(optional.isPresent())
+			return optional.get();
+		throw new OrderDoesnotExistsException("Order Not Found!!");
 	}
 	
 	
 
 	@Override
 	public Order submitOrder(Order order) {
-//		order.setOrderDate(LocalDate.now());
-//		order.setItems(itemCart.get(order.getCustomerId()));
 		return orderRepository.save(order);
 	}
 
 	@Override
-	public void cancelOrder(int orderId) throws OrderDoesnotExistsException {
-		// TODO Auto-generated method stub
+	public Order cancelOrder(int orderId,Order order) throws OrderDoesnotExistsException {
+		Optional<Order> optional = orderRepository.findById(orderId);
+		if (optional.isPresent()) {
+			optional.get().setStatus("Cancelled");
+		return orderRepository.save(optional.get());
+			
+		}
+		throw new OrderDoesnotExistsException("Cancelled failed!! Order not found with id ");
 
 	}
 
 	@Override
-	public void deleteOrder(Order order) throws OrderDoesnotExistsException {
-		// TODO Auto-generated method stub
-
+	public void deleteOrder(int orderId) throws OrderDoesnotExistsException {
+		Optional<Order> Optional = orderRepository.findById(orderId);
+		if (Optional.isPresent()) {
+		orderRepository.deleteById(orderId);
+			return;
+		}
+		throw new OrderDoesnotExistsException("Delete failed!! Order not found with id ");
 	}
 
+	@Override
+	public Order editOrder(Order order) throws OrderDoesnotExistsException {
+      Optional<Order> tempOrder = orderRepository.findById(order.getOrderId());
+	  if(tempOrder.isPresent())
+		  return orderRepository.save(order);
+	  throw new OrderDoesnotExistsException("OrderId Not Found");
+      
+	}
+
+	@Override
+	public List<Order> getOrderByCustomerId(int customerId) {
+		return orderRepository.findByCustomerId(customerId);
+	}
+	
+	
 }
